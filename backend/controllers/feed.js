@@ -171,39 +171,33 @@ exports.updatePost = (req, res, next) => {
     });
 };
 
-exports.deletePost = (req, res, next) => {
-  const postId = req.params.postId;
-  Post.findById(postId)
-    .then(post => {
-      if (!post) {
-        const error = new Error("Could not find post.");
-        error.statusCode = 404;
-        throw error;
-      }
-      if (post.creator.toString() !== req.userId){
-        const error = new Error('Not Authorized');
-        error.statusCode = 403;
-        throw error;
-      }
-      clearImage(post.imageUrl);
-      return Post.findByIdAndDelete(postId);
-    })
-    .then(result => {
-      return User.findById(req.userId);
-    })
-    .then(user => {
-      user.posts.pull(postId) // to remove from relational document
-      return user.save();
-    })
-    .then(result => {
-      res.status(200).json({ message: "Deleted post." });
-    })
-    .catch(err => {
-      if (!err.statusCode) {
-        err.statusCode = 500;
-      }
-      next(err);
-    });
+exports.deletePost = async (req, res, next) => {
+  try {
+    const postId = req.params.postId;
+    const post = await Post.findById(postId);
+    if (!post) {
+      const error = new Error("Could not find post.");
+      error.statusCode = 404;
+      throw error;
+    }
+    if (post.creator.toString() !== req.userId) {
+      const error = new Error("Not Authorized");
+      error.statusCode = 403;
+      throw error;
+    }
+    clearImage(post.imageUrl);
+    await Post.findByIdAndDelete(postId);
+    const user = await User.findById(req.userId);
+    user.posts.pull(postId); // to remove from relational document
+    await user.save();
+    io.getIO().emit('posts', {action: 'delete', post: postId});
+    res.status(200).json({ message: "Deleted post." });
+  } catch (err) {
+    if (!err.statusCode) {
+      err.statusCode = 500;
+    }
+    next(err);
+  }
 };
 
 exports.getStatus = (req,res,next) => {
