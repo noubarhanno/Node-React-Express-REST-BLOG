@@ -57,6 +57,10 @@ app.use((error, req,res, next) => {
 mongoose.connect(database.getConnection(), {useNewUrlParser: true})
     .then(result => {
         console.log('conncted');
-        app.listen(8080);
+        const server = app.listen(8080);
+        const io = require('./socket').init(server); // websocket is build on http and it's a protocol so we have to establish it based on the server we create on node
+        io.on('connection', socket => {
+            console.log('Client connected');
+        })
     })
     .catch(err => console.log(err));
