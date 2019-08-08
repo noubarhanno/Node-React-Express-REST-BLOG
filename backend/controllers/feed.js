@@ -57,72 +57,63 @@ exports.getPosts = async (req, res, next) => {
   }
 };
 
-exports.createPost = (req, res, next) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    const error = new Error("Validation failed, entered data is incorrect");
-    error.statusCode = 422;
-    throw error;
-  }
-  if (!req.file) {
-    const error = new Error("No Image Provided");
-    error.statusCode = 422;
-    throw error;
-  }
-  const imageUrl = req.file.path;
-  const title = req.body.title;
-  const content = req.body.content;
-  let creator;
-  const post = new Post({
-    title: title,
-    content: content,
-    imageUrl: imageUrl,
-    creator: req.userId // mongoose will create the object
-  });
-  post
-    .save()
-    .then(result => {
-      return User.findById(req.userId)
-    })
-    .then(user => {
-      creator = user;
-      user.posts.push(post); // mongoose will take care of pulling the post Id
-      return user.save();
-    })
-    .then(result => {
-      res.status(201).json({
-        message: "Post created successfuly",
-        post: post,
-        creator: {_id: creator._id, name: creator.name}
-      });
-    })
-    .catch(err => {
-      if (!err.statusCode) {
-        err.statusCode = 500;
-      }
-      // we cannot use throw err in the promise function so it will not reach the next error handling function
-      // instead we can use the code below , call next and pass the err inside it so it will reach the next error handling function and pass the error we get here to it
-      next(err);
+exports.createPost = async (req, res, next) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      const error = new Error("Validation failed, entered data is incorrect");
+      error.statusCode = 422;
+      throw error;
+    }
+    if (!req.file) {
+      const error = new Error("No Image Provided");
+      error.statusCode = 422;
+      throw error;
+    }
+    const imageUrl = req.file.path;
+    const title = req.body.title;
+    const content = req.body.content;
+    let creator;
+    const post = new Post({
+      title: title,
+      content: content,
+      imageUrl: imageUrl,
+      creator: req.userId // mongoose will create the object
     });
+    await post.save();
+    const user = await User.findById(req.userId);
+    creator = user;
+    user.posts.push(post); // mongoose will take care of pulling the post Id
+    await user.save();
+    res.status(201).json({
+      message: "Post created successfuly",
+      post: post,
+      creator: { _id: creator._id, name: creator.name }
+    });
+  } catch (err) {
+    if (!err.statusCode) {
+      err.statusCode = 500;
+    }
+    next(err);
+  }
 };
 
-exports.getPost = (req, res, next) => {
-  const postId = req.params.postId;
-  Post.findById(postId)
-    .then(post => {
-      if (!post) {
-        const error = new Error("Could not find post");
-        error.statusCode = 404;
-        throw error; // why this work inside a promise because this error will be catched through the catch method
-      }
-      res.status(200).json({ message: "Post fetched.", post: post });
-    })
-    .catch(err => {
-      if (!err.statusCode) {
-        err.statusCode = 500;
-      }
-      next(err);
-    });
+exports.getPost = async (req, res, next) => {
+  try {
+    const postId = req.params.postId;
+    const post = await Post.findById(postId);
+    if (!post) {
+      const error = new Error("Could not find post");
+      error.statusCode = 404;
+      throw error;
+    }
+    res.status(200).json({ message: "Post fetched.", post: post });
+  } catch (err) {
+    if (!err.statusCode) {
+      err.statusCode = 500;
+    }
+    next(err);
+  }
 };
 
 exports.updatePost = (req, res, next) => {
