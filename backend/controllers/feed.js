@@ -42,6 +42,7 @@ exports.getPosts = async (req, res, next) => {
   try {
     const totalItems = await Post.find().countDocuments();
     const posts = await Post.find()
+      .populate('creator')
       .skip((currentPage - 1) * perPage)
       .limit(perPage);
     res.status(200).json({
@@ -73,7 +74,6 @@ exports.createPost = async (req, res, next) => {
     const imageUrl = req.file.path;
     const title = req.body.title;
     const content = req.body.content;
-    let creator;
     const post = new Post({
       title: title,
       content: content,
@@ -82,13 +82,12 @@ exports.createPost = async (req, res, next) => {
     });
     await post.save();
     const user = await User.findById(req.userId);
-    creator = user;
     user.posts.push(post); // mongoose will take care of pulling the post Id
     await user.save();
     res.status(201).json({
       message: "Post created successfuly",
       post: post,
-      creator: { _id: creator._id, name: creator.name }
+      creator: { _id: user._id, name: user.name }
     });
   } catch (err) {
     if (!err.statusCode) {
