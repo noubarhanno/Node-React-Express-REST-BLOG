@@ -4,33 +4,57 @@ const fs = require("fs");
 const path = require("path");
 const User = require('../models/user');
 
-exports.getPosts = (req, res, next) => {
+
+// asynchronise with then and catch
+// exports.getPosts = (req, res, next) => {
+//   const currentPage = req.query.page || 1;
+//   const perPage = 2;
+//   let totalItems;
+//   Post.find()
+//     .countDocuments()
+//     .then(count => {
+//       totalItems = count;
+//       return Post.find()
+//         .skip((currentPage - 1) * perPage)
+//         .limit(perPage);
+//     })
+//     .then(posts => {
+//       res
+//         .status(200)
+//         .json({
+//           message: "Fetched posts successfuly",
+//           posts: posts,
+//           totalItems: totalItems
+//         });
+//     })
+//     .catch(err => {
+//       if (!err.statusCode) {
+//         err.statusCode = 500;
+//       }
+//       next(err);
+//     });
+// };
+
+//asynchronise using async and await
+exports.getPosts = async (req, res, next) => {
   const currentPage = req.query.page || 1;
   const perPage = 2;
-  let totalItems;
-  Post.find()
-    .countDocuments()
-    .then(count => {
-      totalItems = count;
-      return Post.find()
-        .skip((currentPage - 1) * perPage)
-        .limit(perPage);
-    })
-    .then(posts => {
-      res
-        .status(200)
-        .json({
-          message: "Fetched posts successfuly",
-          posts: posts,
-          totalItems: totalItems
-        });
-    })
-    .catch(err => {
-      if (!err.statusCode) {
-        err.statusCode = 500;
-      }
-      next(err);
+  try {
+    const totalItems = await Post.find().countDocuments();
+    const posts = await Post.find()
+      .skip((currentPage - 1) * perPage)
+      .limit(perPage);
+    res.status(200).json({
+      message: "Fetched posts successfuly",
+      posts: posts,
+      totalItems: totalItems
     });
+  } catch (err) {
+    if (!err.statusCode) {
+      err.statusCode = 500;
+    }
+    next(err);
+  }
 };
 
 exports.createPost = (req, res, next) => {
