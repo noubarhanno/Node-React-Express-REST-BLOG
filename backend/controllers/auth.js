@@ -55,7 +55,7 @@ exports.login = (req,res,next) => {
                 error.statusCode = 401;
                 throw error;
             }
-            const token = jwt.sign({email: loadedUser.email, userId: loadedUser._id.toString()}, 'somesupersecrectforsecurity', {expiresIn: '1h'}) // create a signature
+            const token = jwt.sign({email: loadedUser.email, userId: loadedUser._id.toString()}, 'somesupersecrectsecret', {expiresIn: '1h'}) // create a signature
             res.status(200).json({token: token, userId: loadedUser._id.toString()});
         })
         .catch(err => {
